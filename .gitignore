@@ -42,5 +42,6 @@ __screenshots__/
 # System files
 .DS_Store
 Thumbs.db
-saluto-server/env/local.env
-saluto-server/env/production.env
+saluto-server/cmd/.env.local
+saluto-server/cmd/.env.prod
+saluto-server/build/*

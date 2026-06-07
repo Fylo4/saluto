@@ -55,8 +55,7 @@ func (app *application) mount() (http.Handler, error) {
 		envName = "local"
 	}
 
-	println("Loading file: ../env/" + envName + ".env")
-	err := godotenv.Load("../env/" + envName + ".env")
+	err := godotenv.Load(".env." + envName)
 	if err != nil {
 		log.Fatalf("Error loading .env file: %v", err)
 		return nil, err
@@ -171,8 +170,4 @@ type config struct {
 
 type dbConfig struct {
 	dsn string
-}
-
-type testret struct {
-	message string
 }
