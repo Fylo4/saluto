@@ -15,7 +15,10 @@ func main() {
 		config: cfg,
 	}
 
-	err := api.run(api.mount())
+	handler, err := api.mount()
+	if handler != nil {
+		err = api.run(handler)
+	}
 
 	if err != nil {
 		log.Printf("Application closed with error: %s", err.Error())

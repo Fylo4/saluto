@@ -1,16 +1,36 @@
 package main
 
 import (
+	"context"
+	"crypto/tls"
+	"crypto/x509"
+	"fmt"
+	"io/ioutil"
 	"log"
 	"net/http"
+	"os"
 	"time"
 
+	"github.com/Fylo4/saluto/tutorial"
+	"github.com/jackc/pgx/v5"
+
+	"github.com/caarlos0/env/v11"
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
+	"github.com/joho/godotenv"
 	"github.com/rs/cors"
 )
 
-func (app *application) mount() http.Handler {
+type EnvConfig struct {
+	User    string
+	Pass    string
+	Host    string
+	Port    string
+	Name    string
+	SSLMode string
+}
+
+func (app *application) mount() (http.Handler, error) {
 	r := chi.NewRouter()
 
 	c := cors.New(cors.Options{
@@ -27,13 +47,90 @@ func (app *application) mount() http.Handler {
 	r.Use(c.Handler)
 	r.Use(middleware.Timeout(60 * time.Second))
 
+	ctx := context.Background()
+
+	// Load environment variables
+	envName := os.Getenv("APP_ENV")
+	if envName == "" {
+		envName = "local"
+	}
+
+	println("Loading file: ../env/" + envName + ".env")
+	err := godotenv.Load("../env/" + envName + ".env")
+	if err != nil {
+		log.Fatalf("Error loading .env file: %v", err)
+		return nil, err
+	}
+
+	envVars := EnvConfig{
+		User:    os.Getenv("DB_USER"),
+		Pass:    os.Getenv("DB_PASS"),
+		Host:    os.Getenv("DB_HOST"),
+		Port:    os.Getenv("DB_PORT"),
+		Name:    os.Getenv("DB_NAME"),
+		SSLMode: os.Getenv("DB_SSLMODE"),
+	}
+	if err := env.Parse(&envVars); err != nil {
+		log.Fatalf("Error reading the environment variables: %v", err)
+		return nil, err
+	}
+
+	var tlsConfig *tls.Config
+
+	if envName == "local" {
+		// Load AWS RDS CA certificate
+		rootCertPool := x509.NewCertPool()
+		pem, err := ioutil.ReadFile("../aws-certificate-bundle.pem")
+		if err != nil {
+			log.Fatal("failed to read CA file:", err)
+		}
+		if ok := rootCertPool.AppendCertsFromPEM(pem); !ok {
+			log.Fatal("failed to append CA cert")
+		}
+
+		// Build TLS config
+		tlsConfig = &tls.Config{
+			RootCAs:    rootCertPool,
+			ServerName: envVars.Host,
+		}
+	}
+
+	// Build pgx config
+	connstr := fmt.Sprintf(
+		"user=%s password=%s host=%s port=%s dbname=%s sslmode=%s",
+		envVars.User, envVars.Pass, envVars.Host, envVars.Port, envVars.Name, envVars.SSLMode,
+	)
+	log.Println(connstr)
+	config, err := pgx.ParseConfig(connstr)
+	if err != nil {
+		panic(err)
+	}
+	if tlsConfig != nil {
+		config.TLSConfig = tlsConfig
+	}
+
+	// Connect
+	conn, err := pgx.ConnectConfig(ctx, config)
+	if err != nil {
+		log.Fatal("connection failed:", err)
+	}
+
+	log.Println("Connected")
+	defer conn.Close(ctx)
+	sql := tutorial.New(conn)
+
 	r.Get("/api/", func(w http.ResponseWriter, r *http.Request) {
 		w.Write([]byte("{\"message\": \"Hello world\"}"))
 	})
+	r.Get("/api/writers", func(w http.ResponseWriter, r *http.Request) {
+		_, err := sql.ListAuthors(ctx)
+		if err != nil {
+			log.Fatal(err)
+		}
+		w.Write([]byte("{\"message\": \"TODO Implement me\"}"))
+	})
 
-	// http.ListenAndServe(":3333", r)
-
-	return r
+	return r, nil
 }
 
 func (app *application) run(h http.Handler) error {

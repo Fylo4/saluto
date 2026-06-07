@@ -3,4 +3,5 @@ import { TestPage } from './pages/test.page';
 
 export const routes: Routes = [
     {path: "test", component: TestPage},
+    {path: '**', redirectTo: 'test'},
 ];
