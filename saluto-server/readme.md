@@ -18,6 +18,40 @@ You'll need to have the server private key installed to SSH into it, upload file
 
 The server is expecting an .env file for configuration. Upload .env.prd to the server using `scp -i ~/Keys/saluto-key.pem cmd/.env.prod ubuntu@<ip>:/home/ubuntu/.env.prod`
 
+(Actually, you probably don't need .env.prd, do the following instead)
+
+I am now making a systemd service file to provide the env variables, run the app on launch, reboot the app on crash, etc.
+
+`sudo nano /etc/systemd/system/app.service`
+
+paste the following, with your credentials:
+```
+[Unit]
+Description=Go API Server
+After=network.target
+
+[Service]
+User=ubuntu
+WorkingDirectory=/home/ubuntu
+ExecStart=/home/ubuntu/app
+Restart=always
+Environment=APP_ENV=production
+Environment=DB_USER=dbmaster
+Environment=DB_PASS=yourpassword
+Environment=DB_HOST=ls-xxxx.rds.amazonaws.com
+Environment=DB_PORT=5432
+Environment=DB_NAME=dbmaster
+Environment=DB_SSLMODE=require
+
+[Install]
+WantedBy=multi-user.target
+```
+save and exit
+Reload systemd: `sudo systemctl daemon-reload`
+Start the service: `sudo systemctl start app`
+Enable on boot: `sudo systemctl enable app`
+Status check: `sudo systemctl status app`
+
 
 ## Running
 

@@ -49,16 +49,15 @@ func (app *application) mount() (http.Handler, error) {
 
 	ctx := context.Background()
 
-	// Load environment variables
+	// Load environment variables (Local only)
 	envName := os.Getenv("APP_ENV")
-	if envName == "" {
-		envName = "local"
-	}
 
-	err := godotenv.Load(".env." + envName)
-	if err != nil {
-		log.Fatalf("Error loading .env file: %v", err)
-		return nil, err
+	if envName != "" {
+		err := godotenv.Load(".env." + envName)
+		if err != nil {
+			log.Fatalf("Error loading .env file: %v", err)
+			return nil, err
+		}
 	}
 
 	envVars := EnvConfig{
