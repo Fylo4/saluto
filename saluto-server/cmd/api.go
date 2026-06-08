@@ -36,7 +36,7 @@ func (app *application) mount() (http.Handler, error) {
 	r := chi.NewRouter()
 
 	c := cors.New(cors.Options{
-		AllowedOrigins:   []string{"http://localhost:4200", "https://myapp.com"},
+		AllowedOrigins:   []string{"http://localhost:4200", "https://salutosm.netlify.app"},
 		AllowedMethods:   []string{"GET", "POST", "PUT", "DELETE", "OPTIONS"},
 		AllowedHeaders:   []string{"*"},
 		AllowCredentials: true,
