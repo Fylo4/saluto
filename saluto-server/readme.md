@@ -62,6 +62,39 @@ If you change the schema and need to propagate that change to the db:
 
 `psql "host=<host> user=dbmasteruser dbname=dbmaster sslmode=require sslrootcert=saluto-server/aws-certificate-bundle.pem" -f saluto-server/sql/schema.sql`
 
+## Using Caddy on Lightsail
+
+Caddy handles our HTTPS certificates and proxies to the Go server. HTTP is used by the server, Caddy turns that into HTTPS when talking to the client, I think, I'm honestly not entirely sure how that all works.
+
+To install, run this on the Lightsail server:
+```
+sudo apt install -y debian-keyring debian-archive-keyring apt-transport-https
+curl -1sLf 'https://dl.cloudsmith.io/public/caddy/stable/gpg.key' | sudo gpg --dearmor -o /usr/share/keyrings/caddy-stable-archive-keyring.gpg
+curl -1sLf 'https://dl.cloudsmith.io/public/caddy/stable/debian.deb.txt' | sudo tee /etc/apt/sources.list.d/caddy-stable.list
+sudo apt update
+sudo apt install caddy
+```
+
+Create a file using nano or vim or whatever:
+`sudo nano /etc/caddy/Caddyfile`
+and add the following:
+```
+yourdomain.com {
+    reverse_proxy localhost:8080
+}
+```
+obviously, yourdomain.com should be your actual domain. (I will go over connecting a domain shortly.)
+
+Then restart Caddy to initialize everything.
+`sudo systemctl reload caddy`
+
+## Adding the Server Domain
+
+Add the following dns records:
+
+A   Host: @     Value: <Lightsail static IP>    TTL: 300
+A   Host: www   Value: <Lightsail static IP>    TTL: 300
+
 ## Running
 
 cd into the cmd folder and do `APP_ENV=local go run .`
@@ -72,7 +105,14 @@ To compile the program, go to the cmd folder and run:
 `GOOS=linux GOARCH=amd64 go build -o ../build/app`
 
 To upload the built file to the server:
-`scp -i ~/Keys/saluto-key.pem ../build/app ubuntu@<ip>:/home/ubuntu/app` (You need to have the key file)
+`scp -i ~/Keys/saluto-key.pem ../build/app ubuntu@34.196.129.60:/home/ubuntu/app` (You need to have the key file)
 
 To run on the server:
 `APP_ENV=prod ./app`
+
+## Tech Stack
+
+Client (Angular)
+Caddy (On Lightsail server)
+Go server (Lightsail)
+Postgresql DB (Lightsail)
