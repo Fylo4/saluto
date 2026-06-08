@@ -1,5 +1,30 @@
-<h1>Hello World</h1>
+<h1>Saluto</h1>
 
-<button (click)="testServer()">Test Server</button>
+<!-- <button (click)="testServer()">Test Server</button> -->
 
-<p>{{serverResponse()}}</p>
+<!-- <p>{{testServerResponse()}}</p> -->
+
+<hr />
+
+<h2>Create Post</h2>
+
+<label for="name-field">Display Name:</label>
+<input [(ngModel)]="displayName" id="name-field" />
+<br />
+
+<label for="post-message">Message:</label>
+<textarea style="width: 100%" [(ngModel)]="messageToPost" id="post-message"></textarea>
+<button (click)="btnPostMessage()">Post</button>
+
+<hr />
+
+<h2>All Posts</h2>
+<button (click)="btnGetMessages()">Refresh Posts</button>
+<div style="display: flex; flex-direction: column; gap: 0.5rem 0.5rem; margin-top: 1rem;">
+    @for (msg of allMessages(); track i; let i = $index) {
+        <div style="display: flex; flex-direction: column;">
+            <span style="font-size: 0.8rem">{{msg.Displayname}} {{msg.Timeposted | date:"short"}}</span>
+            <span>{{msg.Body}}</span>
+        </div>
+    }
+</div>

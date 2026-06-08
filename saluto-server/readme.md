@@ -52,6 +52,15 @@ Start the service: `sudo systemctl start app`
 Enable on boot: `sudo systemctl enable app`
 Status check: `sudo systemctl status app`
 
+## Compiling SQLc
+
+In saluto-server folder: `sqlc generate`
+
+## Updating Database
+
+If you change the schema and need to propagate that change to the db:
+
+`psql "host=<host> user=dbmasteruser dbname=dbmaster sslmode=require sslrootcert=saluto-server/aws-certificate-bundle.pem" -f saluto-server/sql/schema.sql`
 
 ## Running
 

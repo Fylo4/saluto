@@ -4,14 +4,16 @@ import (
 	"context"
 	"crypto/tls"
 	"crypto/x509"
+	"encoding/json"
 	"fmt"
+	"io"
 	"io/ioutil"
 	"log"
 	"net/http"
 	"os"
 	"time"
 
-	"github.com/Fylo4/saluto/tutorial"
+	saluto "github.com/Fylo4/saluto/sql/compiled"
 	"github.com/jackc/pgx/v5"
 
 	"github.com/caarlos0/env/v11"
@@ -114,21 +116,56 @@ func (app *application) mount() (http.Handler, error) {
 	}
 
 	log.Println("Connected")
-	defer conn.Close(ctx)
-	sql := tutorial.New(conn)
+	sql := saluto.New(conn)
 
-	r.Get("/api/", func(w http.ResponseWriter, r *http.Request) {
+	r.Get("/api/test", func(w http.ResponseWriter, r *http.Request) {
 		w.Write([]byte("{\"message\": \"Hello world\"}"))
 	})
-	r.Get("/api/writers", func(w http.ResponseWriter, r *http.Request) {
-		_, err := sql.ListAuthors(ctx)
+	r.Get("/api/posts", func(w http.ResponseWriter, r *http.Request) {
+		log.Println("A")
+		posts, err := sql.GetMessages(ctx)
 		if err != nil {
-			log.Fatal(err)
+			log.Println("An error occurred while getting messages.")
+			log.Println(err)
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
 		}
-		w.Write([]byte("{\"message\": \"TODO Implement me\"}"))
+		log.Println("B")
+		jsonBytes, err := json.Marshal(posts)
+		if err != nil {
+			http.Error(w, "Failed to encode JSON", 500)
+			return
+		}
+		w.Header().Set("Content-Type", "application/json")
+		w.Write(jsonBytes)
+	})
+	r.Post("/api/post", func(w http.ResponseWriter, r *http.Request) {
+		body, err := io.ReadAll(r.Body)
+		if err != nil {
+			w.WriteHeader(400)
+			w.Write([]byte("Error reading request body"))
+		}
+		parsedBody := API_Post_Create_Input{}
+		json.Unmarshal([]byte(body), &parsedBody)
+		params := saluto.PostMessageParams{
+			Displayname: parsedBody.DisplayName,
+			Body:        parsedBody.Message,
+		}
+		err = sql.PostMessage(ctx, params)
+		if err != nil {
+			log.Println("DB INSERT ERROR:", err)
+			http.Error(w, err.Error(), 500)
+			return
+		}
+		w.Write([]byte("true"))
 	})
 
 	return r, nil
+}
+
+type API_Post_Create_Input struct {
+	DisplayName string `json:"displayName"`
+	Message     string `json:"message"`
 }
 
 func (app *application) run(h http.Handler) error {
